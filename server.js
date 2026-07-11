@@ -10,7 +10,7 @@ app.use(express.json());
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 // Set these in Railway environment variables
-const CMS_BASE = 'https://data.cms.gov/provider-data/api/1';
+const CMS_BASE = 'https://data.cms.gov/provider-data/api/1/datastore/query';
 
 // ── HEALTH CHECK ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
