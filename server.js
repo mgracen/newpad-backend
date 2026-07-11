@@ -32,7 +32,9 @@ app.post('/search', async (req, res) => {
     // Fetch from Medicare Care Compare API - free, no key required
     const params = {
       '$limit': 100,
-      '$where': `provider_zip_code like '${zip.substring(0, 3)}%'`,
+      'conditions[0][property]': 'zip_code',
+'conditions[0][value]': zip.substring(0, 3),
+'conditions[0][operator]': 'STARTS_WITH',
       '$order': 'provider_name ASC',
     };
 
@@ -45,7 +47,7 @@ app.post('/search', async (req, res) => {
     }
 
     const response = await axios.get(
-      `${CMS_BASE}/dataset/4pq5-n9py/data`,
+      `${CMS_BASE}/4pq5-n9py/0`,
       { params, timeout: 15000 }
     );
 
