@@ -1,10 +1,3 @@
-That confirms it — only half the code got through. Here's what to do:
-
-Click the pencil to edit server.js on GitHub
-Select all the code (Ctrl+A)
-Delete it all
-Copy the code below carefully — start from the very first line and make sure you get all the way to the last }); at the bottom:
-
 javascriptconst express = require('express');
 const cors = require('cors');
 const axios = require('axios');
