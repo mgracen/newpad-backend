@@ -15,30 +15,52 @@ app.get('/health', (req, res) => {
 app.post('/search', async (req, res) => {
   const { zip } = req.body;
   if (!zip) return res.status(400).json({ error: 'zip is required' });
+
   try {
     const zipPrefix = zip.substring(0, 3);
+
+    // Map zip first digit to state - CMS only supports = operator so we filter by state then zip client-side
+    const firstDigit = zip.charAt(0);
+    const stateMap = {
+      '0': 'CT', '1': 'NY', '2': 'VA', '3': 'FL',
+      '4': 'OH', '5': 'MN', '6': 'IL', '7': 'TX',
+      '8': 'CO', '9': 'CA'
+    };
+    const state = stateMap[firstDigit] || 'FL';
+
+    console.log(`[Search] zip=${zip} -> state=${state}`);
+
     const response = await axios.get(
       'https://data.cms.gov/provider-data/api/1/datastore/query/4pq5-n9py/0',
       {
         params: {
-          'conditions[0][property]': 'zip_code',
-          'conditions[0][value]': zipPrefix,
-          'conditions[0][operator]': 'STARTS_WITH',
-          'limit': 50,
+          'conditions[0][property]': 'provider_state',
+          'conditions[0][value]': state,
+          'conditions[0][operator]': '=',
+          'limit': 500,
           'offset': 0,
-          'count': true,
-          'results': true,
-          'schema': false,
-          'keys': true,
+          'count': 'true',
+          'results': 'true',
           'format': 'json',
         },
-        timeout: 15000,
+        timeout: 20000,
       }
     );
-    const results = response.data.results || response.data || [];
-    console.log(`[Search] zip=${zip} raw response keys: ${Object.keys(response.data).join(',')}`);
-    console.log(`[Search] found=${results.length}`);
-    const facilities = results.map(f => ({
+
+    const allResults = response.data.results || [];
+    console.log(`[Search] Got ${allResults.length} results for state ${state}`);
+
+    // Filter by zip prefix client-side
+    const filtered = allResults.filter(f =>
+      f.zip_code && f.zip_code.toString().startsWith(zipPrefix)
+    );
+
+    console.log(`[Search] Filtered to ${filtered.length} for zip prefix ${zipPrefix}`);
+
+    // Fall back to full state results if no zip match
+    const final = filtered.length > 0 ? filtered : allResults.slice(0, 25);
+
+    const facilities = final.map(f => ({
       id: f.cms_certification_number_ccn,
       name: f.provider_name,
       address: f.provider_address,
@@ -49,7 +71,9 @@ app.post('/search', async (req, res) => {
       cms_star_rating: parseInt(f.overall_rating) || null,
       capacity: parseInt(f.number_of_certified_beds) || null,
     })).filter(f => f.name);
+
     res.json({ results: facilities, count: facilities.length, zip });
+
   } catch (err) {
     console.error('[Search] Error:', err.message);
     if (err.response) {
@@ -71,13 +95,13 @@ app.get('/facility/:id', async (req, res) => {
           'conditions[0][value]': id,
           'conditions[0][operator]': '=',
           'limit': 1,
-          'results': true,
+          'results': 'true',
           'format': 'json',
         },
         timeout: 10000,
       }
     );
-    const results = response.data.results || response.data || [];
+    const results = response.data.results || [];
     if (!results.length) return res.status(404).json({ error: 'Facility not found' });
     const f = results[0];
     res.json({
