@@ -17,10 +17,8 @@ app.post('/search', async (req, res) => {
   if (!zip) return res.status(400).json({ error: 'zip is required' });
 
   try {
-    const zipPrefix = zip.substring(0, 3);
-
-    // Map zip first digit to state - CMS only supports = operator so we filter by state then zip client-side
-    const firstDigit = zip.charAt(0);
+    const zipPrefix = zip.replace(/\D/g, '').substring(0, 3);
+    const firstDigit = zipPrefix.charAt(0);
     const stateMap = {
       '0': 'CT', '1': 'NY', '2': 'VA', '3': 'FL',
       '4': 'OH', '5': 'MN', '6': 'IL', '7': 'TX',
@@ -28,13 +26,13 @@ app.post('/search', async (req, res) => {
     };
     const state = stateMap[firstDigit] || 'FL';
 
-    console.log(`[Search] zip=${zip} -> state=${state}`);
+    console.log(`[Search] zip=${zip} prefix=${zipPrefix} state=${state}`);
 
     const response = await axios.get(
       'https://data.cms.gov/provider-data/api/1/datastore/query/4pq5-n9py/0',
       {
         params: {
-          'conditions[0][property]': 'provider_state',
+          'conditions[0][property]': 'state',
           'conditions[0][value]': state,
           'conditions[0][operator]': '=',
           'limit': 500,
@@ -48,26 +46,25 @@ app.post('/search', async (req, res) => {
     );
 
     const allResults = response.data.results || [];
-    console.log(`[Search] Got ${allResults.length} results for state ${state}`);
+    console.log(`[Search] Got ${allResults.length} for state=${state}`);
 
     // Filter by zip prefix client-side
     const filtered = allResults.filter(f =>
-      f.zip_code && f.zip_code.toString().startsWith(zipPrefix)
+      f.zip && f.zip.toString().startsWith(zipPrefix)
     );
 
     console.log(`[Search] Filtered to ${filtered.length} for zip prefix ${zipPrefix}`);
 
-    // Fall back to full state results if no zip match
     const final = filtered.length > 0 ? filtered : allResults.slice(0, 25);
 
     const facilities = final.map(f => ({
       id: f.cms_certification_number_ccn,
       name: f.provider_name,
       address: f.provider_address,
-      city: f.provider_city,
-      state: f.provider_state,
-      zip: f.zip_code,
-      phone: f.phone_number,
+      city: f.city_town,
+      state: f.state,
+      zip: f.zip,
+      phone: f.telephone_number,
       cms_star_rating: parseInt(f.overall_rating) || null,
       capacity: parseInt(f.number_of_certified_beds) || null,
     })).filter(f => f.name);
@@ -108,10 +105,10 @@ app.get('/facility/:id', async (req, res) => {
       id: f.cms_certification_number_ccn,
       name: f.provider_name,
       address: f.provider_address,
-      city: f.provider_city,
-      state: f.provider_state,
-      zip: f.zip_code,
-      phone: f.phone_number,
+      city: f.city_town,
+      state: f.state,
+      zip: f.zip,
+      phone: f.telephone_number,
       cms_star_rating: parseInt(f.overall_rating) || null,
       capacity: parseInt(f.number_of_certified_beds) || null,
       medicare_link: `https://www.medicare.gov/care-compare/details/nursing-home/${f.cms_certification_number_ccn}`,
