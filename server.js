@@ -37,7 +37,6 @@ app.post('/search', async (req, res) => {
           'conditions[0][operator]': '=',
           'limit': 500,
           'offset': 0,
-          'count': 'true',
           'results': 'true',
           'format': 'json',
         },
@@ -46,27 +45,34 @@ app.post('/search', async (req, res) => {
     );
 
     const allResults = response.data.results || [];
-    console.log(`[Search] Got ${allResults.length} for state=${state}`);
 
-    // Filter by zip prefix client-side
-    const filtered = allResults.filter(f =>
-      f.zip && f.zip.toString().startsWith(zipPrefix)
-    );
+    // Log first record keys so we can see exact column names
+    if (allResults.length > 0) {
+      console.log('[Search] Column names:', Object.keys(allResults[0]).join(', '));
+      console.log('[Search] Sample record:', JSON.stringify(allResults[0]).substring(0, 400));
+    }
+
+    // Filter by zip prefix client-side - try multiple possible zip column names
+    const filtered = allResults.filter(f => {
+      const zipVal = f.zip || f.zip_code || f['zip_code'] || f['zip'] || '';
+      return zipVal.toString().startsWith(zipPrefix);
+    });
 
     console.log(`[Search] Filtered to ${filtered.length} for zip prefix ${zipPrefix}`);
 
     const final = filtered.length > 0 ? filtered : allResults.slice(0, 25);
 
+    // Map using all possible column name variants
     const facilities = final.map(f => ({
-      id: f.cms_certification_number_ccn,
+      id: f.cms_certification_number_ccn || f.ccn,
       name: f.provider_name,
-      address: f.provider_address,
-      city: f.city_town,
-      state: f.state,
-      zip: f.zip,
-      phone: f.telephone_number,
-      cms_star_rating: parseInt(f.overall_rating) || null,
-      capacity: parseInt(f.number_of_certified_beds) || null,
+      address: f.provider_address || f.address,
+      city: f.city_town || f.city || f.provider_city,
+      state: f.state || f.provider_state,
+      zip: f.zip || f.zip_code,
+      phone: f.telephone_number || f.phone_number || f.provider_phone_number,
+      cms_star_rating: parseInt(f.overall_rating || f.overall_star_rating) || null,
+      capacity: parseInt(f.number_of_certified_beds || f.certified_beds) || null,
     })).filter(f => f.name);
 
     res.json({ results: facilities, count: facilities.length, zip });
@@ -104,12 +110,12 @@ app.get('/facility/:id', async (req, res) => {
     res.json({
       id: f.cms_certification_number_ccn,
       name: f.provider_name,
-      address: f.provider_address,
-      city: f.city_town,
-      state: f.state,
-      zip: f.zip,
-      phone: f.telephone_number,
-      cms_star_rating: parseInt(f.overall_rating) || null,
+      address: f.provider_address || f.address,
+      city: f.city_town || f.city || f.provider_city,
+      state: f.state || f.provider_state,
+      zip: f.zip || f.zip_code,
+      phone: f.telephone_number || f.phone_number,
+      cms_star_rating: parseInt(f.overall_rating || f.overall_star_rating) || null,
       capacity: parseInt(f.number_of_certified_beds) || null,
       medicare_link: `https://www.medicare.gov/care-compare/details/nursing-home/${f.cms_certification_number_ccn}`,
     });
