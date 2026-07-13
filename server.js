@@ -119,6 +119,8 @@ app.get('/facility/:id', async (req, res) => {
       staffing_rating: f.staffing_rating ? parseInt(f.staffing_rating) : null,
       health_inspection_rating: f.health_inspection_rating ? parseInt(f.health_inspection_rating) : null,
       ownership_type: f.ownership_type,
+      lat: f.latitude ? parseFloat(f.latitude) : null,
+      lng: f.longitude ? parseFloat(f.longitude) : null,
       medicare_link: `https://www.medicare.gov/care-compare/details/nursing-home/${f.cms_certification_number_ccn}`,
     });
   } catch (err) {
