@@ -70,6 +70,8 @@ app.post('/search', async (req, res) => {
       capacity: f.number_of_certified_beds ? parseInt(f.number_of_certified_beds) : null,
       provider_type: f.provider_type || null,
       ownership_type: f.ownership_type || null,
+      lat: f.latitude ? parseFloat(f.latitude) : null,
+      lng: f.longitude ? parseFloat(f.longitude) : null,
     })).filter(f => f.name);
 
     res.json({ results: facilities, count: facilities.length, zip });
