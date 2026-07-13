@@ -51,6 +51,10 @@ app.post('/search', async (req, res) => {
     );
 
     console.log(`[Search] Got ${allResults.length} total, ${filtered.length} for zip prefix ${zipPrefix}`);
+    if (filtered.length > 0) {
+      const types = [...new Set(filtered.map(f => f.provider_type))];
+      console.log(`[Search] Provider types found: ${types.join(', ')}`);
+    }
 
     const final = filtered.length > 0 ? filtered : allResults.slice(0, 25);
 
